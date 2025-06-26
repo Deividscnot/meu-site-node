@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculadora de Odômetro EEPROM</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      color: #333;
+    }
+    .container {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      text-align: center;
+      width: 90%;
+      max-width: 400px;
+    }
+    h1 {
+      color: #0056b3;
+      margin-bottom: 20px;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    input[type="number"], select, input[type="file"] {
+      width: calc(100% - 20px);
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 18px;
+      width: 100%;
+      transition: background-color 0.3s ease;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #message, #resultKM {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+      font-weight: bold;
+      display: none;
+    }
+    #message.success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    #message.error, #resultKM.error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    #resultKM.success {
+      background-color: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+    hr {
+      margin: 30px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Calculadora de Odômetro</h1>
+
+    <!-- FORMULÁRIO 1: GERAR ARQUIVO COM NOVO KM -->
+    <form id="mileageForm">
+      <div class="form-group">
+        <label for="model_select">Selecione o Modelo:</label>
+        <select id="model_select" name="model_select">
+          <option value="biz2018">Honda Biz 2018</option>
+          <option value="titan160">Honda Titan 160</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="new_mileage">Quilometragem Desejada (KM):</label>
+        <input type="number" id="new_mileage" name="new_mileage" placeholder="Ex: 15000" required min="0">
+      </div>
+      <button type="submit">Gerar Arquivo BIN</button>
+    </form>
+    <div id="message"></div>
+
+    <hr>
+
+    <!-- FORMULÁRIO 2: LER KM DE UM ARQUIVO BIN -->
+    <h2>Ler KM de Arquivo .BIN</h2>
+    <form id="kmReaderForm" enctype="multipart/form-data">
+      <input type="file" name="arquivo_bin" accept=".bin" required />
+      <button type="submit">Ler KM</button>
+    </form>
+    <div id="resultKM"></div>
+  </div>
+
+  <script>
+    // Enviar novo KM para gerar BIN
+    document.getElementById('mileageForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const newMileage = document.getElementById('new_mileage').value;
+      const selectedModel = document.getElementById('model_select').value;
+      const messageDiv = document.getElementById('message');
+      messageDiv.style.display = 'none';
+
+      try {
+        const response = await fetch('/alterar-e-baixar-template', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ new_mileage: newMileage, model: selectedModel }),
+        });
+
+        if (response.ok) {
+          const blob = await response.blob();
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `eprom_${selectedModel}_${newMileage}km.bin`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          messageDiv.className = 'success';
+          messageDiv.textContent = 'Arquivo gerado e baixado com sucesso!';
+        } else {
+          const errorText = await response.text();
+          messageDiv.className = 'error';
+          messageDiv.textContent = `Erro: ${errorText}`;
+        }
+      } catch (error) {
+        console.error('Erro:', error);
+        messageDiv.className = 'error';
+        messageDiv.textContent = 'Erro ao conectar com o servidor.';
+      }
+
+      messageDiv.style.display = 'block';
+    });
+
+    // Enviar BIN para leitura de KM
+    document.getElementById('kmReaderForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(event.target);
+      const resultDiv = document.getElementById('resultKM');
+      resultDiv.style.display = 'none';
+
+      try {
+        const response = await fetch('/ler-km', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          resultDiv.className = 'success';
+          resultDiv.textContent = `KM detectado no arquivo: ${data.km} km`;
+        } else {
+          resultDiv.className = 'error';
+          resultDiv.textContent = 'Erro ao processar o arquivo.';
+        }
+      } catch (error) {
+        console.error('Erro ao ler KM:', error);
+        resultDiv.className = 'error';
+        resultDiv.textContent = 'Erro ao conectar com o servidor.';
+      }
+
+      resultDiv.style.display = 'block';
+    });
+  </script>
+</body>
+</html>
