@@ -31,19 +31,21 @@ const mileageLocationsTitan = [
     0xDA, 0xDE, 0xE0, 0xE2
 ];
 
-// Offsets da Biz 2018 (corrigido até 0x0098)
+// Offsets da Biz 2018
 const mileageLocationsBiz = [
     0x005C, 0x0060, 0x0064, 0x0068, 0x006C,
     0x0070, 0x0074, 0x0078, 0x007C, 0x0080,
     0x0084, 0x0088, 0x008C, 0x0098
 ];
+
 // Offsets da CB 500X 2023
 const mileageLocationsCb500x2023 = [
-  0x0100, 0x0104, 0x0108, 0x010C,
-  0x0110, 0x0114, 0x0118, 0x011C,
-  0x0120, 0x0124, 0x0128, 0x012C,
-  0x0130, 0x0134, 0x0138, 0x013C
+    0x0100, 0x0104, 0x0108, 0x010C,
+    0x0110, 0x0114, 0x0118, 0x011C,
+    0x0120, 0x0124, 0x0128, 0x012C,
+    0x0130, 0x0134, 0x0138, 0x013C
 ];
+
 // Função para obter configuração por modelo
 function getModelConfig(modelo) {
     if (modelo === 'titan160') {
@@ -53,11 +55,12 @@ function getModelConfig(modelo) {
         };
     } else if (modelo === 'biz2018') {
         return {
-            template: 'biz2018.bin', // nome alterado aqui
+            template: 'biz2018.bin',
             offsets: mileageLocationsBiz
         };
-        } else if (modelo === 'cb500x2023') {          
-        return { template: 'cb500x2023.bin',
+    } else if (modelo === 'cb500x2023') {
+        return {
+            template: 'cb500x2023.bin',
             offsets: mileageLocationsCb500x2023
         };
     } else {
@@ -93,47 +96,54 @@ app.post('/alterar-e-baixar-template', async (req, res) => {
     }
 });
 
-// Leitura da quilometragem a partir de arquivo BIN
+// Leitura de KM com detecção automática de modelo
 app.post('/ler-km', upload.single('arquivo_bin'), async (req, res) => {
     try {
         const filePath = req.file.path;
         const bin = await fs.readFile(filePath);
 
-        let modelo = 'titan160';
-        let leituraOffsets = mileageLocationsTitan;
+        const modelos = [
+            { nome: 'titan160', offsets: mileageLocationsTitan },
+            { nome: 'biz2018', offsets: mileageLocationsBiz },
+            { nome: 'cb500x2023', offsets: mileageLocationsCb500x2023 }
+        ];
 
-        // Detectar se é Biz pelo tamanho ou lógica adicional
-        if (bin.length < 300 || bin.length === 2048) {
-            modelo = 'biz2018';
-            leituraOffsets = mileageLocationsBiz;
-        }
+        let melhorModelo = null;
+        let maiorContagem = 0;
+        let melhorValor = 0;
 
-        const valoresValidos = [];
+        for (const { nome, offsets } of modelos) {
+            const valoresValidos = [];
 
-        for (const offset of leituraOffsets) {
-            if (offset + 4 <= bin.length) {
-                const valor = bin.readUInt16LE(offset);
-                const complemento = bin.readUInt16LE(offset + 2);
-                if ((valor + complemento) === 0xFFFF) {
-                    valoresValidos.push(valor);
+            for (const offset of offsets) {
+                if (offset + 4 <= bin.length) {
+                    const valor = bin.readUInt16LE(offset);
+                    const complemento = bin.readUInt16LE(offset + 2);
+                    if ((valor + complemento) === 0xFFFF) {
+                        valoresValidos.push(valor);
+                    }
                 }
+            }
+
+            if (valoresValidos.length > maiorContagem) {
+                const frequencias = {};
+                for (const v of valoresValidos) {
+                    frequencias[v] = (frequencias[v] || 0) + 1;
+                }
+                const valorMaisFrequente = Object.entries(frequencias).sort((a, b) => b[1] - a[1])[0][0];
+
+                melhorModelo = nome;
+                melhorValor = valorMaisFrequente;
+                maiorContagem = valoresValidos.length;
             }
         }
 
-        if (valoresValidos.length === 0) {
+        if (!melhorModelo) {
             return res.status(400).send('Não foi possível identificar o KM.');
         }
 
-        // Usar valor mais frequente entre os blocos válidos
-        const frequencias = {};
-        for (const v of valoresValidos) {
-            frequencias[v] = (frequencias[v] || 0) + 1;
-        }
-
-        const valorMaisFrequente = Object.entries(frequencias).sort((a, b) => b[1] - a[1])[0][0];
-        const km = Math.round(valorMaisFrequente / 0.031);
-
-        res.json({ modelo, km });
+        const km = Math.round(melhorValor / 0.031);
+        res.json({ modelo: melhorModelo, km });
     } catch (err) {
         console.error(err);
         res.status(500).send('Erro ao ler arquivo');
