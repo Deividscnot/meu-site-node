@@ -37,7 +37,13 @@ const mileageLocationsBiz = [
     0x0070, 0x0074, 0x0078, 0x007C, 0x0080,
     0x0084, 0x0088, 0x008C, 0x0098
 ];
-
+// Offsets da CB 500X 2023
+const mileageLocationsCb500x2023 = [
+  0x0100, 0x0104, 0x0108, 0x010C,
+  0x0110, 0x0114, 0x0118, 0x011C,
+  0x0120, 0x0124, 0x0128, 0x012C,
+  0x0130, 0x0134, 0x0138, 0x013C
+];
 // Função para obter configuração por modelo
 function getModelConfig(modelo) {
     if (modelo === 'titan160') {
@@ -49,6 +55,10 @@ function getModelConfig(modelo) {
         return {
             template: 'biz2018.bin', // nome alterado aqui
             offsets: mileageLocationsBiz
+        };
+        } else if (modelo === 'cb500x2023') {          
+        return { template: 'cb500x2023.bin',
+            offsets: mileageLocationsCb500x2023
         };
     } else {
         throw new Error('Modelo inválido');
