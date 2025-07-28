@@ -1,0 +1,174 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>EEPROM KM Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      padding: 20px;
+    }
+    .container {
+      max-width: 480px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      box-sizing: border-box;
+    }
+    .result {
+      margin-top: 15px;
+      padding: 10px;
+      background: #eee;
+      border-radius: 8px;
+    }
+    .pay-button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    .pay-button:hover {
+      background-color: #0056b3;
+    }
+    .user-info {
+      background: #333;
+      color: white;
+      padding: 10px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .token-info {
+      color: #007bff;
+      font-weight: bold;
+    }
+    .logout {
+      display: block;
+      margin: 10px auto;
+      text-align: center;
+      color: #dc3545;
+      font-weight: bold;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="user-info" id="userBox">
+      <div id="username">Usuário: carregando...</div>
+      <div id="tokens">Tokens: carregando...</div>
+      <a class="logout" href="/logout">Sair</a>
+    </div>
+
+    <h2>EEPROM KM Tool</h2>
+
+    <form id="generateForm">
+      <label for="model">Modelo:</label>
+      <select id="model" name="model">
+        <option value="titan160">Titan 160</option>
+        <option value="biz2018">Biz 2018</option>
+        <option value="cb500x2023">CB 500X 2023</option>
+        <option value="crosser150">Crosser 150</option>
+      </select>
+
+      <label for="new_mileage">Nova Quilometragem:</label>
+      <input type="number" id="new_mileage" name="new_mileage" required min="0" />
+
+      <button type="submit">Gerar Arquivo BIN (80 Tokens)</button>
+    </form>
+
+    <button class="pay-button" onclick="window.location.href='/comprar-tokens'">Comprar Tokens</button>
+
+    <hr/>
+
+    <form id="readForm" enctype="multipart/form-data">
+      <label for="arquivo_bin">Enviar Arquivo BIN para Leitura:</label>
+      <input type="file" id="arquivo_bin" name="arquivo_bin" accept=".bin" required />
+      <button type="submit">Ler KM do Arquivo</button>
+    </form>
+
+    <div class="result" id="resultado"></div>
+  </div>
+
+  <script>
+    async function carregarUsuario() {
+      const res = await fetch('/api/usuario');
+      const data = await res.json();
+      document.getElementById('username').innerText = 'Usuário: ' + data.username;
+      document.getElementById('tokens').innerHTML = 'Tokens: <span class="token-info">' + data.tokens + '</span>';
+    }
+
+    carregarUsuario();
+
+    document.getElementById('generateForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const model = document.getElementById('model').value;
+      const new_mileage = document.getElementById('new_mileage').value;
+
+      const response = await fetch('/alterar-e-baixar-template', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, new_mileage })
+      });
+
+      const resultado = document.getElementById('resultado');
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${model}_${new_mileage}km.bin`;
+        document.body.appendChild(a);
+        a.click();
+        resultado.innerText = "✅ Arquivo gerado com sucesso.";
+        carregarUsuario();
+      } else {
+        const errText = await response.text();
+        resultado.innerText = "Erro: " + errText;
+      }
+    });
+
+    document.getElementById('readForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData();
+      const fileInput = document.getElementById('arquivo_bin');
+      formData.append('arquivo_bin', fileInput.files[0]);
+
+      const response = await fetch('/ler-km', {
+        method: 'POST',
+        body: formData
+      });
+
+      const resultado = document.getElementById('resultado');
+      if (response.ok) {
+        const data = await response.json();
+        resultado.innerText = `Modelo: ${data.modelo}
+KM: ${data.km}`;
+      } else {
+        const err = await response.text();
+        resultado.innerText = "Erro: " + err;
+      }
+    });
+  </script>
+</body>
+</html>

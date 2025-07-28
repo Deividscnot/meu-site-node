@@ -1,0 +1,10 @@
+<h1>Arquivos - <%= marca %> / <%= modelo %></h1>
+<ul>
+  <% arquivos.forEach(arquivo => { %>
+    <li>
+      <%= arquivo %>
+      - <a href="/airbags/<%= marca %>/<%= modelo %>/download/<%= arquivo %>">Baixar (-80 tokens)</a>
+    </li>
+  <% }) %>
+</ul>
+

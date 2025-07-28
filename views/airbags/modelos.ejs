@@ -1,0 +1,6 @@
+<h1>Modelos da <%= marca %></h1>
+<ul>
+  <% modelos.forEach(modelo => { %>
+    <li><a href="/airbags/<%= marca %>/<%= modelo %>"><%= modelo %></a></li>
+  <% }) %>
+</ul>

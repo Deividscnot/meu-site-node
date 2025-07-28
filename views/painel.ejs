@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EEPROM Oficial</title>
+  <link rel="stylesheet" href="/static/style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/feather-icons"></script>
+</head>
+<body class="sidebar-collapsed">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <i data-feather="cpu"></i>
+      <span>EEPROM</span>
+    </div>
+    <nav>
+      <a href="/" class="active"><i data-feather="home"></i><span>Dashboard</span></a>
+      <a href="/comprar-tokens"><i data-feather="dollar-sign"></i><span>Tokens</span></a>
+      <a href="/logout"><i data-feather="log-out"></i><span>Sair</span></a>
+    </nav>
+  </aside>
+
+  <!-- Main content -->
+  <div class="main">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="btn-toggle" aria-label="Abrir menu"><i data-feather="menu"></i></button>
+      <h1>Dashboard</h1>
+      <div class="user-menu">
+        <span class="user-name"><%= user.username %></span>
+        <span class="user-tokens"><%= user.tokens %> tokens</span>
+        <i data-feather="chevron-down"></i>
+      </div>
+    </header>
+
+    <!-- Content -->
+    <section class="content">
+      <div class="row">
+
+        <!-- Card: Gerar Template -->
+        <div class="card card-gradient">
+          <h2><i data-feather="download"></i> Gerar Template</h2>
+          <form id="gen-form" action="/alterar-e-baixar-template" method="post" class="form">
+            <div class="form-group">
+              <label>Modelo</label>
+              <select id="model-select" name="model" required>
+                <option value="titan160">Titan 160</option>
+                <option value="biz2018">Biz 2018</option>
+                <option value="cb500x2023">CB500X 2023</option>
+                <option value="crosser150">Crosser 150</option>
+                <option value="broz24C04">Honda Broz (24C04)</option>
+                <option value="cb300">CB 300</option>
+                <option value="xre190">XRE 190</option>
+                <option value="cbtwister24c02">CB Twister (24C02)</option>
+                <option value="xt66024c02">XT660 (24C02)</option>
+              </select>
+            </div>
+
+            <!-- Painéis específicos -->
+            <div id="model-panels" class="form-group">
+              <% const models = ['titan160', 'biz2018', 'cb500x2023', 'crosser150', 'broz24C04', 'cb300', 'xre190', 'cbtwister24c02', 'xt66024c02']; %>
+              <% models.forEach(function(m) { %>
+                <div class="model-panel" data-model="<%= m %>">
+                  <h3><%= m.toUpperCase().replace('24C02',' (24C02)').replace('24C04',' (24C04)') %></h3>
+                  <img src="/static/img/<%= m %>.png" alt="<%= m %>" class="model-img" />
+                  <p>Painel de configuração para <%= m %>.</p>
+                </div>
+              <% }); %>
+            </div>
+
+            <div class="form-group">
+              <label>Novo KM</label>
+              <input type="number" name="new_mileage" id="new_km" min="0" required />
+            </div>
+            <button type="submit" class="btn-primary">Gerar & Baixar</button>
+          </form>
+        </div>
+
+        <!-- Card: Ler KM -->
+        <div class="card card-gradient">
+          <h2><i data-feather="eye"></i> Ler KM Atual</h2>
+          <form action="/ler-km" method="post" enctype="multipart/form-data" class="form-modern">
+            <div class="form-row">
+              <label>Modelo</label>
+              <select name="model" required>
+                <option value="titan160">Titan 160</option>
+                <option value="biz2018">Biz 2018</option>
+                <option value="cb500x2023">CB500X 2023</option>
+                <option value="crosser150">Crosser 150</option>
+                <option value="broz24C04">Honda Broz (24C04)</option>
+                <option value="cb300">CB 300</option>
+                <option value="xre190">XRE 190</option>
+                <option value="cbtwister24c02">CB Twister (24C02)</option>
+                <option value="xt66024c02">XT660 (24C02)</option>
+              </select>
+            </div>
+            <div class="form-row">
+              <label>.bin</label>
+              <div class="file-input-wrapper">
+                <input type="file" name="binfile" accept=".bin" required />
+                <span class="file-label">Escolha o arquivo .bin</span>
+              </div>
+            </div>
+            <button type="submit" class="btn-modern">Ler KM</button>
+          </form>
+
+          <% if (currentKm !== null) { %>
+            <div class="output-modern">
+              KM atual: <strong><%= currentKm %> km</strong>
+            </div>
+          <% } %>
+
+          <% if (message) { %>
+            <div class="error-modern"><%= message %></div>
+          <% } %>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    feather.replace();
+
+    document.querySelector('.btn-toggle').addEventListener('click', () => {
+      document.body.classList.toggle('sidebar-collapsed');
+    });
+
+    const select = document.getElementById('model-select');
+    const panels = document.querySelectorAll('.model-panel');
+    const kmInput = document.getElementById('new_km');
+
+    function showPanel(m) {
+      panels.forEach(p => p.style.display = p.dataset.model === m ? 'block' : 'none');
+      if (["cbtwister24c02", "xt66024c02"].includes(m)) {
+        kmInput.max = 99999;
+      } else {
+        kmInput.removeAttribute('max');
+      }
+    }
+
+    showPanel(select.value);
+    select.addEventListener('change', () => showPanel(select.value));
+  </script>
+</body>
+</html>

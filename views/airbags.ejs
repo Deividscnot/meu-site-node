@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Airbags</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; background: #f2f2f2; }
+    h2 { color: #333; }
+    .marca { margin-bottom: 20px; background: white; padding: 15px; border-radius: 10px; }
+    .arquivo { margin: 5px 0; }
+  </style>
+</head>
+<body>
+  <h2>Arquivos de Airbag</h2>
+  <p>Saldo: <strong><%= user.tokens %></strong> tokens</p>
+
+  <% estrutura.forEach(grupo => { %>
+    <div class="marca">
+      <h3><%= grupo.marca %></h3>
+      <% grupo.arquivos.forEach(arq => { %>
+        <form class="arquivo" method="POST" action="/airbags/download">
+          <input type="hidden" name="marca" value="<%= grupo.marca %>"/>
+          <input type="hidden" name="arquivo" value="<%= arq %>"/>
+          <button type="submit"><%= arq %></button>
+        </form>
+      <% }) %>
+    </div>
+  <% }) %>
+</body>
+</html>

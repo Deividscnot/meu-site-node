@@ -1,0 +1,22 @@
+<h1>Buscar Airbag</h1>
+
+<form method="GET" action="/airbags/buscar">
+  <input type="text" name="q" placeholder="Digite o número do airbag" value="<%= termo %>" required>
+  <button type="submit">Buscar</button>
+</form>
+
+<% if (termo && resultados.length === 0) { %>
+  <p style="color: red;">Nenhum resultado encontrado para "<%= termo %>"</p>
+<% } %>
+
+<% if (resultados.length > 0) { %>
+  <h3>Resultados encontrados:</h3>
+  <ul>
+    <% resultados.forEach(arq => { %>
+      <li>
+        <%= arq %>
+        - <a href="/airbags/download/<%= arq %>">Baixar (-80 tokens)</a>
+      </li>
+    <% }) %>
+  </ul>
+<% } %>

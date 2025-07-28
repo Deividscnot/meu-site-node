@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Comprar Tokens – EEPROM</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <header class="buy-header">
+    <div class="container">
+      <h1>Escolha sua Recarga</h1>
+      <p>Adquira tokens e continue usando nossos serviços sem interrupções.</p>
+    </div>
+  </header>
+
+  <main class="buy-main container">
+    <section class="plans-grid">
+      <!-- 25% Jar -->
+      <div class="plan-card">
+        <img src="/static/img/jar-25.png" alt="25% cheio" class="plan-icon" />
+        <div class="plan-value">50</div>
+        <div class="plan-label">Tokens</div>
+        <div class="plan-price">R$ 50,00</div>
+        <button class="btn-plan" data-tokens="50">Comprar</button>
+      </div>
+      <!-- 50% Jar -->
+      <div class="plan-card">
+        <img src="/static/img/jar-50.png" alt="50% cheio" class="plan-icon" />
+        <div class="plan-value">100</div>
+        <div class="plan-label">Tokens</div>
+        <div class="plan-price">R$ 100,00</div>
+        <button class="btn-plan" data-tokens="100">Comprar</button>
+      </div>
+      <!-- 75% Jar -->
+      <div class="plan-card">
+        <img src="/static/img/jar-75.png" alt="75% cheio" class="plan-icon" />
+        <div class="plan-value">200</div>
+        <div class="plan-label">Tokens</div>
+        <div class="plan-price">R$ 200,00</div>
+        <button class="btn-plan" data-tokens="200">Comprar</button>
+      </div>
+      <!-- 100% Jar -->
+      <div class="plan-card">
+        <img src="/static/img/jar-100.png" alt="Cheio" class="plan-icon" />
+        <div class="plan-value">500</div>
+        <div class="plan-label">Tokens</div>
+        <div class="plan-price">R$ 500,00</div>
+        <button class="btn-plan" data-tokens="500">Comprar</button>
+      </div>
+      <!-- Full Jar Extra -->
+      <div class="plan-card">
+        <img src="/static/img/jar-full.png" alt="Extra cheio" class="plan-icon" />
+        <div class="plan-value">1000</div>
+        <div class="plan-label">Tokens</div>
+        <div class="plan-price">R$ 1000,00</div>
+        <button class="btn-plan" data-tokens="1000">Comprar</button>
+      </div>
+    </section>
+
+    <section id="qrcode-section" class="qrcode-section" style="display:none;">
+      <h2>Escaneie com PIX</h2>
+      <img id="qr-image" alt="QR Code PIX" />
+      <p>TXID: <span id="txid"></span></p>
+      <button id="confirm-pix" class="btn-plan btn-confirm"
+              data-tokens=""
+              data-txid="">
+        Já paguei
+      </button>
+    </section>
+  </main>
+
+  <script>
+    const planButtons  = document.querySelectorAll('.btn-plan[data-tokens]');
+    const qrSection    = document.getElementById('qrcode-section');
+    const qrImage      = document.getElementById('qr-image');
+    const txidSpan     = document.getElementById('txid');
+    const confirmBtn   = document.getElementById('confirm-pix');
+
+    planButtons.forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const valor = btn.dataset.tokens;
+        const txid  = Math.random().toString(36).substr(2,10);
+
+        const res = await fetch(`/pix-qrcode?valor=${valor}&txid=${txid}`);
+        if (!res.ok) return alert('Erro ao gerar QR Code.');
+
+        const { qrImageUrl } = await res.json();
+        qrImage.src          = qrImageUrl;
+        txidSpan.textContent = txid;
+        qrSection.style.display = 'block';
+        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+
+        confirmBtn.dataset.tokens = valor;
+        confirmBtn.dataset.txid    = txid;
+      });
+    });
+
+    confirmBtn.addEventListener('click', async () => {
+      const valor = confirmBtn.dataset.tokens;
+      const txid  = confirmBtn.dataset.txid;
+
+      const res = await fetch('/confirmar-pix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ valor, txid })
+      });
+
+      if (!res.ok) {
+        return alert('Erro ao registrar pagamento.');
+      }
+
+      document.body.innerHTML = await res.text();
+    });
+  </script>
+</body>
+</html>

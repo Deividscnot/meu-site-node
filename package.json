@@ -1,17 +1,23 @@
 {
-  "name": "meu_projeto_eprom",
+  "name": "meu_projeto_eeprom",
   "version": "1.0.0",
+  "description": "Servidor para gerar e ler quilometragem de arquivos .bin",
   "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node server.js"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "express": "^5.1.0",
-    "multer": "^2.0.1"
-  },
-  "description": ""
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.0.1",
+    "ejs": "^3.1.10",
+    "express": "^4.18.2",
+    "express-session": "^1.18.1",
+    "mercadopago": "^1.5.13",
+    "multer": "^1.4.5-lts.1",
+    "node-telegram-bot-api": "^0.66.0",
+    "pix-payload": "^1.0.4",
+    "qrcode": "^1.5.4",
+    "twilio": "^5.7.2",
+    "uuid": "^11.1.0"
+  }
 }

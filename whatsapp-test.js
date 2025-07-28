@@ -1,0 +1,2 @@
+TELEGRAM_BOT_TOKEN=seu_bot_token_aqui
+TELEGRAM_CHAT_ID=seu_chat_id_aqui

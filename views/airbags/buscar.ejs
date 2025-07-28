@@ -1,0 +1,14 @@
+<h1>Buscar Airbag</h1>
+<form method="GET" action="/airbags/buscar">
+  <input type="text" name="codigo" placeholder="Digite o número do airbag" required />
+  <button type="submit">Buscar</button>
+</form>
+
+<% if (resultado) { %>
+  <h2>Resultado:</h2>
+  <p>Arquivo encontrado: <strong><%= resultado %></strong></p>
+  <a href="/airbags/download/<%= resultado %>">Baixar (-80 tokens)</a>
+<% } else if (buscou) { %>
+  <p>Nenhum arquivo encontrado para o código informado.</p>
+<% } %>
+

@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EEPROM Oficial</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div style="max-width: 600px; margin: auto; padding: 40px;">
+    <h1>Bem-vindo, <%= user.username %>!</h1>
+    <p>Você possui <strong><%= user.tokens %></strong> tokens.</p>
+
+    <div style="margin-top: 30px;">
+      <a href="/airbags/buscar" class="btn-primary">🔍 Buscar Airbag</a>
+      <br><br>
+      <a href="/alterar-km" class="btn-primary">📊 Arquivos de painel moto</a>
+    </div>
+
+    <p style="margin-top: 40px;"><a href="/logout">Sair</a></p>
+  </div>
+</body>
+</html>

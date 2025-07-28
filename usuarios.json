@@ -1,0 +1,22 @@
+[
+  {
+    "username": "admin",
+    "passwordHash": "$2b$10$vttXJtLaApwvv/zQ/nXUZO7qDHhNOIfgZxfkvFusEtiWo4o/dEB6S",
+    "tokens": 0
+  },
+  {
+    "username": "diandra",
+    "passwordHash": "$2b$10$14RjjslXpCJoChY9jY.8D.GKlW4qWtngD6FxvcSILAVtnZRLFF7ge",
+    "tokens": 50
+  },
+  {
+    "username": "DIANDRA",
+    "passwordHash": "$2b$10$t15N//8tpdM8t/cfQ8xFH.G2t8k7nV3eQOVElKYiAtSq0btsiohpW",
+    "tokens": 120
+  },
+  {
+    "username": "Deivid",
+    "passwordHash": "$2b$10$Rbn4xiYpEq3aYIv9bVqrZOPRP4nfeOk8HN6PkVd25gr0ohQmdGgk.",
+    "tokens": 0
+  }
+]
