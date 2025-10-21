@@ -6,19 +6,72 @@
   <title>EEPROM Oficial</title>
   <link rel="stylesheet" href="/static/style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/feather-icons"></script>
+ <script src="https://unpkg.com/feather-icons"></script>
+<style>
+  /* reforço do modal para bloquear interação/rolagem */
+  .modal-mask {
+    position: fixed;
+    top: 0; right: 0; bottom: 0; left: 0; /* substitui inset */
+    background: rgba(0,0,0,.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+
+  .modal-card {
+    width: min(600px, 92vw);
+    background: #fff;
+    color: #111;
+    border-radius: 12px;
+    box-shadow: 0 22px 60px rgba(0,0,0,.35);
+    padding: 24px 20px;
+    text-align: center;
+  }
+
+  .modal-card h2 { margin: 0 0 8px 0; font-weight: 800; }
+  .modal-card p  { margin: 0 0 12px 0; color: #4b5563; }
+
+  .btn-aceite {
+    background: #00ffc8;
+    color: #111;
+    border: 0;
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-weight: 800;
+    cursor: pointer;
+  }
+
+  .btn-aceite:disabled { opacity: .6; cursor: not-allowed; }
+</style>
 </head>
 <body class="sidebar-collapsed">
+  <% if (typeof session === 'undefined') { var session = {}; } %>
+
+  <!-- ===== Modal do Termo (exibe somente se ainda não foi aceito) ===== -->
+  <% const TERMO_OK = !!session.termoAceitoAt; %>
+  <div id="modal-termo" class="modal-mask" aria-hidden="<%= TERMO_OK ? 'true' : 'false' %>" role="dialog" aria-labelledby="termo-title" aria-modal="true" style="display:<%= TERMO_OK ? 'none' : 'flex' %>">
+    <div class="modal-card">
+      <h2 id="termo-title">Termo de Responsabilidade</h2>
+      <p>Ao continuar utilizando a plataforma, você declara que leu e concorda com o
+        <a href="/termos" target="_blank" style="text-decoration:underline;">Termo de Responsabilidade</a>.
+      </p>
+      <div style="margin-top: 12px;">
+        <button id="btn-termo" class="btn-aceite">Li e Concordo</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Sidebar -->
-  <aside class="sidebar">
+  <aside class="sidebar" aria-label="Menu lateral">
     <div class="brand">
-      <i data-feather="cpu"></i>
+      <i data-feather="cpu" aria-hidden="true"></i>
       <span>EEPROM</span>
     </div>
     <nav>
-      <a href="/" class="active"><i data-feather="home"></i><span>Dashboard</span></a>
-      <a href="/comprar-tokens"><i data-feather="dollar-sign"></i><span>Tokens</span></a>
-      <a href="/logout"><i data-feather="log-out"></i><span>Sair</span></a>
+      <a href="/" class="active"><i data-feather="home" aria-hidden="true"></i><span>Dashboard</span></a>
+      <a href="/comprar-tokens"><i data-feather="dollar-sign" aria-hidden="true"></i><span>Tokens</span></a>
+      <a href="/logout"><i data-feather="log-out" aria-hidden="true"></i><span>Sair</span></a>
     </nav>
   </aside>
 
@@ -26,52 +79,52 @@
   <div class="main">
     <!-- Topbar -->
     <header class="topbar">
-      <button class="btn-toggle" aria-label="Abrir menu"><i data-feather="menu"></i></button>
+      <button class="btn-toggle" aria-label="Abrir/fechar menu"><i data-feather="menu"></i></button>
       <h1>Dashboard</h1>
       <div class="user-menu">
         <span class="user-name"><%= user.username %></span>
         <span class="user-tokens"><%= user.tokens %> tokens</span>
-        <i data-feather="chevron-down"></i>
+        <i data-feather="chevron-down" aria-hidden="true"></i>
       </div>
     </header>
 
     <!-- Content -->
     <section class="content">
+      <% const modelsList = ['titan160','biz2018','cb500x2023','crosser150','factor15093c66','broz24C04','cb300','xre190','cbtwister24c02','tornado24c02','xt66024c02','xre300_2014_24c02','xre300_2018_93c66']; %>
+
       <div class="row">
 
         <!-- Card: Gerar Template -->
         <div class="card card-gradient">
-          <h2><i data-feather="download"></i> Gerar Template</h2>
+          <h2><i data-feather="download" aria-hidden="true"></i> Gerar Template</h2>
           <form id="gen-form" action="/alterar-e-baixar-template" method="post" class="form">
             <div class="form-group">
-              <label>Modelo</label>
+              <label for="model-select">Modelo</label>
               <select id="model-select" name="model" required>
-                <option value="titan160">Titan 160</option>
-                <option value="biz2018">Biz 2018</option>
-                <option value="cb500x2023">CB500X 2023</option>
-                <option value="crosser150">Crosser 150</option>
-                <option value="broz24C04">Honda Broz (24C04)</option>
-                <option value="cb300">CB 300</option>
-                <option value="xre190">XRE 190</option>
-                <option value="cbtwister24c02">CB Twister (24C02)</option>
-                <option value="xt66024c02">XT660 (24C02)</option>
+                <% modelsList.forEach(function(m){ %>
+                  <option value="<%= m %>" <%= (selectedModel===m?'selected':'') %>>
+                    <%= m.toUpperCase().replace('24C02',' (24C02)').replace('24C04',' (24C04)') %>
+                  </option>
+                <% }) %>
               </select>
             </div>
 
             <!-- Painéis específicos -->
             <div id="model-panels" class="form-group">
-              <% const models = ['titan160', 'biz2018', 'cb500x2023', 'crosser150', 'broz24C04', 'cb300', 'xre190', 'cbtwister24c02', 'xt66024c02']; %>
-              <% models.forEach(function(m) { %>
-                <div class="model-panel" data-model="<%= m %>">
+              <% modelsList.forEach(function(m) { %>
+                <div class="model-panel" data-model="<%= m %>" hidden>
                   <h3><%= m.toUpperCase().replace('24C02',' (24C02)').replace('24C04',' (24C04)') %></h3>
-                  <img src="/static/img/<%= m %>.png" alt="<%= m %>" class="model-img" />
+                  <img id="panel-img-<%= m %>" src="/static/img/<%= m %>.png?v=1"
+                       alt="Painel ilustrativo do modelo <%= m %>"
+                       class="model-img"
+                       onerror="this.onerror=null; this.src='/static/img/placeholder.png';" />
                   <p>Painel de configuração para <%= m %>.</p>
                 </div>
               <% }); %>
             </div>
 
             <div class="form-group">
-              <label>Novo KM</label>
+              <label for="new_km">Novo KM</label>
               <input type="number" name="new_mileage" id="new_km" min="0" required />
             </div>
             <button type="submit" class="btn-primary">Gerar & Baixar</button>
@@ -80,31 +133,30 @@
 
         <!-- Card: Ler KM -->
         <div class="card card-gradient">
-          <h2><i data-feather="eye"></i> Ler KM Atual</h2>
-          <form action="/ler-km" method="post" enctype="multipart/form-data" class="form-modern">
+          <h2><i data-feather="eye" aria-hidden="true"></i> Ler KM Atual</h2>
+          <form id="read-form" class="form-modern" enctype="multipart/form-data">
             <div class="form-row">
-              <label>Modelo</label>
-              <select name="model" required>
-                <option value="titan160">Titan 160</option>
-                <option value="biz2018">Biz 2018</option>
-                <option value="cb500x2023">CB500X 2023</option>
-                <option value="crosser150">Crosser 150</option>
-                <option value="broz24C04">Honda Broz (24C04)</option>
-                <option value="cb300">CB 300</option>
-                <option value="xre190">XRE 190</option>
-                <option value="cbtwister24c02">CB Twister (24C02)</option>
-                <option value="xt66024c02">XT660 (24C02)</option>
+              <label for="read-model">Modelo</label>
+              <select id="read-model" name="model" required>
+                <% modelsList.forEach(function(m){ %>
+                  <option value="<%= m %>" <%= (selectedModel===m?'selected':'') %>>
+                    <%= m.toUpperCase().replace('24C02',' (24C02)').replace('24C04',' (24C04)') %>
+                  </option>
+                <% }) %>
               </select>
             </div>
             <div class="form-row">
-              <label>.bin</label>
+              <label for="binfile">.bin</label>
               <div class="file-input-wrapper">
-                <input type="file" name="binfile" accept=".bin" required />
+                <input id="binfile" type="file" name="binfile" accept=".bin" required />
                 <span class="file-label">Escolha o arquivo .bin</span>
               </div>
             </div>
             <button type="submit" class="btn-modern">Ler KM</button>
           </form>
+
+          <div id="read-output" class="output-modern" style="display:none;"></div>
+          <div id="read-error" class="error-modern" style="display:none;"></div>
 
           <% if (currentKm !== null) { %>
             <div class="output-modern">
@@ -123,25 +175,127 @@
   <script>
     feather.replace();
 
-    document.querySelector('.btn-toggle').addEventListener('click', () => {
+    // toggle da sidebar
+    document.querySelector('.btn-toggle')?.addEventListener('click', () => {
       document.body.classList.toggle('sidebar-collapsed');
     });
 
-    const select = document.getElementById('model-select');
-    const panels = document.querySelectorAll('.model-panel');
-    const kmInput = document.getElementById('new_km');
+    // ===== Lógica dos painéis por modelo =====
+    const panels    = document.querySelectorAll('.model-panel');
+    const kmInput   = document.getElementById('new_km');
+    const selectGen = document.getElementById('model-select');
+    const selectRead= document.getElementById('read-model');
 
     function showPanel(m) {
-      panels.forEach(p => p.style.display = p.dataset.model === m ? 'block' : 'none');
-      if (["cbtwister24c02", "xt66024c02"].includes(m)) {
+      panels.forEach(p => {
+        const on = p.dataset.model === m;
+        p.hidden = !on;
+      });
+
+      // limites por modelo
+      if (["cbtwister24c02", "tornado24c02", "xt66024c02"].includes(m)) {
         kmInput.max = 99999;
+      } else if (m === "xre300_2014_24c02") {
+        kmInput.max = 999999;
       } else {
         kmInput.removeAttribute('max');
       }
     }
 
-    showPanel(select.value);
-    select.addEventListener('change', () => showPanel(select.value));
+    selectGen.addEventListener('change', () => {
+      const m = selectGen.value;
+      selectRead.value = m;
+      showPanel(m);
+    });
+    selectRead.addEventListener('change', () => {
+      const m = selectRead.value;
+      selectGen.value = m;
+      showPanel(m);
+    });
+
+    // inicialização
+    (function init() {
+      const m = "<%= selectedModel %>" || selectGen.value || "<%= modelsList[0] %>";
+      selectGen.value  = m;
+      selectRead.value = m;
+      showPanel(m);
+    })();
+
+    // ===== Modal de aceite do termo =====
+    (function termoModal(){
+      const mask = document.getElementById('modal-termo');
+      const btn  = document.getElementById('btn-termo');
+      if (!mask || !btn) return;
+
+      btn.addEventListener('click', async () => {
+        try {
+          btn.disabled = true;
+          const resp = await fetch('/aceitar-termo', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: '{}'
+          });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          // some com o modal e libera o painel
+          mask.style.display = 'none';
+          mask.setAttribute('aria-hidden','true');
+        } catch (e) {
+          alert('Não foi possível registrar o aceite. Tente novamente.');
+        } finally {
+          btn.disabled = false;
+        }
+      }, { once: true });
+    })();
+
+    // ===== Leitura via AJAX =====
+    const readForm = document.getElementById('read-form');
+    const readOut  = document.getElementById('read-output');
+    const readErr  = document.getElementById('read-error');
+
+    readForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      readOut.style.display = 'none';
+      readErr.style.display = 'none';
+      readOut.textContent = '';
+      readErr.textContent = '';
+
+      const form  = new FormData();
+      const file  = document.getElementById('binfile').files[0];
+      const model = selectRead.value;
+
+      if (!file) {
+        readErr.textContent = 'Selecione um arquivo .bin';
+        readErr.style.display = 'block';
+        return;
+      }
+
+      form.append('binfile', file); // nome esperado pelo Multer
+      form.append('model', model);
+
+      try {
+        const resp = await fetch('/ler-km', {
+          method: 'POST',
+          headers: { 'x-fetch-json': '1' },
+          body: form
+        });
+
+        const text = await resp.text();
+        let data = null;
+        try { data = JSON.parse(text); } catch (_) {}
+
+        if (!resp.ok) {
+          readErr.textContent = 'Erro: ' + (data?.error || text || 'Falha ao ler KM.');
+          readErr.style.display = 'block';
+          return;
+        }
+
+        readOut.innerHTML = `KM atual: <strong>${data.km}</strong> km (modelo: <code>${data.modelo}</code>)`;
+        readOut.style.display = 'block';
+      } catch (err) {
+        readErr.textContent = 'Erro de rede: ' + err.message;
+        readErr.style.display = 'block';
+      }
+    });
   </script>
 </body>
 </html>

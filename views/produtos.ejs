@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Produtos - BGtecnologia</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f5f5;
+      color: #333;
+      margin: 0;
+    }
+    header {
+      background-color: #FF6F00;
+      color: white;
+      padding: 15px 30px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    header h1 {
+      font-size: 1.4rem;
+      margin: 0;
+    }
+    nav a {
+      color: white;
+      margin-left: 15px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 40px auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+
+    h2 {
+      color: #FF6F00;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 25px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 20px;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 15px rgba(0,0,0,0.1);
+    }
+
+    .card h3 {
+      color: #FF6F00;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>BGtecnologia</h1>
+    <nav>
+      <a href="/">Início</a>
+      <a href="/produtos">Produtos</a>
+      <a href="/sobre">Sobre nós</a>
+      <a href="/termo">Termos</a>
+      <a href="/login">Área do cliente</a>
+    </nav>
+  </header>
+
+  <div class="container">
+    <h2>Nossos Produtos</h2>
+
+    <div class="grid">
+      <div class="card">
+        <h3>Arquivos de Airbag</h3>
+        <p>Base de dados completa de arquivos .clear para reset e alinhamento de módulos automotivos.</p>
+      </div>
+
+      <div class="card">
+        <h3>Boots</h3>
+        <p>Diagramas e arquivos de inicialização segura para ECUs e TCUs.</p>
+      </div>
+
+      <div class="card">
+        <h3>Calculadoras</h3>
+        <p>Ferramentas inteligentes para leitura e correção de KM em EEPROMs e dashboards.</p>
+      </div>
+
+      <div class="card">
+        <h3>Casamento de ECU</h3>
+        <p>Serviços e arquivos para sincronização e pareamento entre ECU e imobilizador.</p>
+      </div>
+
+      <div class="card">
+        <h3>Arquivos de ECU</h3>
+        <p>Mapas originais e modificados de diversas centrais automotivas, com suporte técnico dedicado.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bem-vindo à Plataforma BG Tecnologia</title>
+  <link rel="icon" href="/favicon.ico">
+  <style>
+    :root { --ac: #00ffc8; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: Inter, Arial, sans-serif;
+      background: linear-gradient(135deg,#0a0a0f,#1c1c29);
+      color:#fff; min-height:100vh; display:flex; flex-direction:column;
+    }
+    header{
+      position:sticky; top:0; z-index:10;
+      display:flex; align-items:center; justify-content:space-between; gap:16px;
+      padding:16px 24px; background:rgba(0,0,0,.35); backdrop-filter: blur(6px);
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .brand{margin:0; font-size:18px; color:var(--ac); letter-spacing:.5px}
+    .link{color:var(--ac); text-decoration:none}
+    .btn-login{
+      background:var(--ac); color:#111; padding:10px 16px; border-radius:10px;
+      text-decoration:none; font-weight:600; transition:.2s;
+    }
+    .btn-login[disabled]{opacity:.5; pointer-events:none}
+    main{flex:1; display:flex; align-items:center; justify-content:center; padding:28px}
+    .card{
+      width:min(720px,94vw);
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px; padding:28px;
+      box-shadow:0 10px 30px rgba(0,0,0,.35);
+    }
+    h2{margin:0 0 10px 0; color:var(--ac); text-align:center}
+    p{color:#d6d6d6; line-height:1.55; text-align:center}
+
+    /* bloco do termo rolável */
+    .termo-wrap{margin-top:18px}
+    .termo-box{
+      margin:10px 0 0 0; padding:16px;
+      border-radius:12px; background:rgba(255,255,255,.05);
+      border:1px dashed rgba(255,255,255,.2);
+      max-height:240px; overflow:auto; scroll-behavior:smooth;
+    }
+    .hint{
+      font-size:12px; color:#9ab; margin-top:8px; text-align:right;
+    }
+
+    .gate{ /* área do checkbox + botões (aparece só após rolar até o fim) */
+      display:none; margin-top:16px; text-align:center;
+    }
+    .gate label{display:flex; gap:12px; align-items:flex-start; justify-content:center; cursor:pointer}
+    .actions{display:flex; gap:12px; flex-wrap:wrap; margin-top:14px; justify-content:center}
+    .btn{
+      appearance:none; border:none; border-radius:10px;
+      padding:12px 18px; font-weight:700; cursor:pointer;
+    }
+    .btn-primary{background:var(--ac); color:#111}
+    .btn-outline{background:transparent; border:1px solid rgba(255,255,255,.35); color:#fff}
+    .btn[disabled]{opacity:.45; cursor:not-allowed}
+
+    footer{padding:14px; text-align:center; color:#9aa}
+  </style>
+</head>
+<body>
+  <header>
+    <h1 class="brand">BG Tecnologia</h1>
+    <nav style="display:flex; gap:16px; align-items:center">
+      <a class="link" href="/sobre">Sobre</a>
+      <a class="link" href="/termos" target="_blank">Termos</a>
+      <a id="header-login" class="btn-login" href="#" disabled>Fazer Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="card">
+      <h2>Bem-vindo à Plataforma BG Tecnologia</h2>
+      <p>Ferramentas profissionais para leitura, edição e geração de arquivos EEPROM.<br>
+      Para continuar, leia o termo até o final.</p>
+
+      <div class="termo-wrap">
+        <div id="termoBox" class="termo-box">
+          <!-- inclui o texto do termo como HTML para reaproveitar -->
+          <%- include('partials/termo_text'); %>
+        </div>
+        <div id="hint" class="hint">Role até o fim para habilitar o aceite</div>
+
+        <div id="gate" class="gate">
+          <label>
+            <input type="checkbox" id="ck-termo" style="margin-top:4px">
+            <span>Declaro que li e concordo com o <a class="link" href="/termos" target="_blank">Termo de Responsabilidade</a> e farei uso apenas para fins legais e autorizados.</span>
+          </label>
+
+          <div class="actions">
+            <button id="btn-login" class="btn btn-primary" disabled>Entrar</button>
+            <button id="btn-cadastrar" class="btn btn-outline" disabled>Criar conta</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>© <%= new Date().getFullYear() %> BG Tecnologia</footer>
+
+  <script>
+    const termoBox = document.getElementById('termoBox');
+    const gate = document.getElementById('gate');
+    const hint = document.getElementById('hint');
+    const ck = document.getElementById('ck-termo');
+    const btnLogin = document.getElementById('btn-login');
+    const btnCad = document.getElementById('btn-cadastrar');
+    const headerLogin = document.getElementById('header-login');
+
+    function setButtonsEnabled(ok){
+      btnLogin.disabled = btnCad.disabled = !ok;
+      headerLogin.style.opacity = ok ? '1' : '.5';
+      headerLogin.style.pointerEvents = ok ? 'auto' : 'none';
+      headerLogin.href = ok ? '/login' : '#';
+      if (ok) headerLogin.removeAttribute('disabled'); else headerLogin.setAttribute('disabled','');
+    }
+
+    // Se já aceitou nesta sessão, pula as exigências
+    if (sessionStorage.getItem('termoAceito') === '1') {
+      hint.style.display = 'none';
+      gate.style.display = 'block';
+      ck.checked = true;
+      setButtonsEnabled(true);
+    } else {
+      setButtonsEnabled(false);
+      // exige rolar até o fim para mostrar o checkbox/botões
+      const onScroll = () => {
+        const atBottom = Math.ceil(termoBox.scrollTop + termoBox.clientHeight) >= termoBox.scrollHeight;
+        if (atBottom) {
+          gate.style.display = 'block';
+          hint.textContent = 'Agora marque o aceite para continuar';
+          termoBox.removeEventListener('scroll', onScroll);
+        }
+      };
+      termoBox.addEventListener('scroll', onScroll);
+    }
+
+    ck?.addEventListener('change', async () => {
+      const ok = ck.checked;
+      setButtonsEnabled(ok);
+      if (ok) {
+        try {
+          await fetch('/aceitar-termo', { method: 'POST', headers: { 'Content-Type':'application/json' }, body: '{}' });
+          sessionStorage.setItem('termoAceito','1');
+        } catch(e) {
+          console.warn('Falha ao notificar o servidor sobre o termo:', e);
+        }
+      } else {
+        sessionStorage.removeItem('termoAceito');
+      }
+    });
+
+    btnLogin.addEventListener('click', () => { if (!btnLogin.disabled) window.location.href = '/login'; });
+    btnCad.addEventListener('click',  () => { if (!btnCad.disabled)  window.location.href = '/register'; });
+  </script>
+</body>
+</html>

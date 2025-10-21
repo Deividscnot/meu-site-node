@@ -12,11 +12,22 @@
   {
     "username": "DIANDRA",
     "passwordHash": "$2b$10$t15N//8tpdM8t/cfQ8xFH.G2t8k7nV3eQOVElKYiAtSq0btsiohpW",
-    "tokens": 120
+    "tokens": 700
   },
   {
     "username": "Deivid",
     "passwordHash": "$2b$10$Rbn4xiYpEq3aYIv9bVqrZOPRP4nfeOk8HN6PkVd25gr0ohQmdGgk.",
     "tokens": 0
+  },
+  {
+    "username": "bigode",
+    "passwordHash": "$2b$10$zgc5FGEo9BEAXAsykrAZ9eIZ4FCRR/6jYbAqjkRON.3RFBfzGc.mq",
+    "tokens": 0
+  },
+  {
+    "username": "deivid",
+    "passwordHash": "$2b$10$hJphjiW7hLmjBULblv5rROyaxX.aXd1zdbeXW9iaK3rvaG7V3ZP9e",
+    "tokens": 480,
+    "lastLoginAt": "2025-10-19T13:31:04.877Z"
   }
 ]

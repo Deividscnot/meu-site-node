@@ -467,3 +467,35 @@ body {
     display: none;
   }
 }
+/* ==========================================
+   Termo de Responsabilidade (Login)
+   ========================================== */
+.termo-wrapper {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.termo-conteudo {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+}
+
+.logo-termo {
+  width: 100px;
+  height: auto;
+  flex-shrink: 0;
+  border-radius: 6px;
+}
+
+.termo-box {
+  height: 150px;
+  overflow-y: auto;
+  background: #f1f1f1;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  padding: 12px;
+  border-radius: 6px;
+  flex: 1;
+}
+

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Sobre nós — BGtecnologia</title>
+  <link rel="icon" href="/static/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root{--brand:#00ffc8;--brand2:#00ffc8;--text:#1f2937;--muted:#6b7280;--line:#e5e7eb;--bg:#fff;--radius:14px;--shadow:0 12px 28px rgba(0,0,0,.08)}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#fff;color:var(--text);font:16px/1.45 "Inter",system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    .navbar{position:sticky;top:0;background:#fff;border-bottom:1px solid var(--line)}
+    .navbar .inner{max-width:1050px;margin:0 auto;display:flex;align-items:center;gap:20px;padding:14px 20px}
+    .logo{display:flex;align-items:center;gap:10px;font-weight:800}
+    .menu{display:flex;gap:18px;flex:1}
+    .menu a{color:var(--text);font-weight:600;text-decoration:none}
+    .btn{border:0;border-radius:10px;background:var(--brand);color:#fff;font-weight:700;padding:10px 16px;cursor:pointer}
+    .btn:hover{background:var(--brand2)}
+    .btn-light{background:#fff;border:1px solid var(--line);color:#111}
+    .container{max-width:920px;margin:0 auto;padding:28px 20px}
+    .hero{display:flex;gap:18px;align-items:center;margin-bottom:18px}
+    /* removidos estilos de imagem */
+    h1{font-size:30px;line-height:1.15;margin-bottom:8px}
+    p.lead{color:var(--muted);margin-bottom:16px}
+    .grid{display:grid;gap:16px}
+    @media(min-width:860px){.grid{grid-template-columns:1.1fr .9fr}}
+    .card{background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+    .card .body{padding:20px}
+    h2{font-size:20px;margin-bottom:8px}
+    ul{margin-left:18px}
+    .alert{padding:12px 14px;border-radius:10px;border:1px solid #fde7d9;background:#fff6ef;color:#7a2e12;margin-top:10px}
+    .muted{color:#9aa0a6;font-size:12px}
+    .footer-mini{margin:18px 0 6px;color:#9aa0a6;font-size:12px;text-align:center}
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <div class="inner">
+      <div class="logo">
+        <span>BGtecnologia</span>
+      </div>
+      <nav class="menu">
+        <a href="/">Início</a>
+        <a href="/airbags">Produtos</a>
+        <a href="/termos">Termos</a>
+        <a href="/login">Área do cliente</a>
+      </nav>
+      <div style="display:flex;gap:10px">
+        <a class="btn-light" href="/login">Entrar</a>
+        <a class="btn" href="/register">Criar conta</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="hero">
+      <!-- imagem removida -->
+      <div>
+        <h1>Sobre nós</h1>
+        <p class="lead">Apoiamos profissionais da reparação com materiais técnicos e recursos que simplificam o dia a dia, com seriedade e foco em qualidade.</p>
+      </div>
+    </div>
+
+    <div class="grid">
+      <section class="card">
+        <div class="body">
+          <h2>Nosso propósito</h2>
+          <p>Somos movidos por oferecer <strong>conteúdo e ferramentas</strong> que ajudam técnicos e reparadores a trabalhar com mais segurança, velocidade e precisão. Nosso objetivo é elevar o padrão do serviço, reduzir retrabalho e valorizar o profissional da bancada.</p>
+          <ul style="margin-top:8px">
+            <li>Materiais e arquivos para <strong>uso técnico e educacional</strong>;</li>
+            <li>Prioridade em <strong>boas práticas, ética e rastreabilidade</strong>;</li>
+            <li>Melhorias contínuas a partir do <strong>feedback da comunidade</strong>.</li>
+          </ul>
+        </div>
+      </section>
+
+      <aside class="card">
+        <div class="body">
+          <h2>Compromisso ético</h2>
+          <p>O uso desta plataforma é <strong>exclusivo para fins legais</strong> e sempre com <strong>autorização do proprietário</strong>. Fraudes são proibidas.</p>
+          <div class="alert">
+            <b>Alerta legal:</b> adulterar quilometragem (hodômetro) para enganar terceiros pode configurar
+            <b>estelionato (art. 171 do Código Penal — pena de 1 a 5 anos e multa)</b> e, em contexto comercial,
+            <b>crime contra as relações de consumo (art. 7º, IX, Lei 8.137/1990 — pena de 2 a 5 anos e multa)</b>. Consulte a legislação aplicável antes de qualquer operação.
+          </div>
+          <p class="muted" style="margin-top:8px">O usuário é responsável pelo uso adequado das ferramentas e arquivos.</p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="footer-mini">© <%= new Date().getFullYear() %> BGtecnologia — Todos os direitos reservados.</div>
+  </main>
+</body>
+</html>
