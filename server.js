@@ -15,7 +15,7 @@ const TelegramBot = require('node-telegram-bot-api');
 const app = express();
 const port = process.env.PORT || 3010;
 
-const FILE_TOKEN_COST = 80;
+const FILE_TOKEN_COST = 60;
 const DATA_DIR = path.join(__dirname, 'data');
 const PENDENTES_FILE = path.join(__dirname, 'pendentes.json');
 
