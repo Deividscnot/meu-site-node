@@ -229,9 +229,7 @@ app.get('/logout', (req, res) => req.session.destroy(() => res.redirect('/login'
 // HOME pública (landing). Se logado, manda pro painel.
 app.get('/', (req, res) => {
   if (req.session?.user) return res.redirect('/painel');
-  
-  // Teste de deploy Railway
-  res.send('<h1>🚀 Versão Nova — Railway Teste 21/10/2025</h1>');
+  res.render('home_public'); // não deve usar "user" dentro da view
 });
 
 // Sobre / Produtos / Termos (GET) — públicos
