@@ -269,6 +269,15 @@ app.get('/alterar-km', requireLogin, (req, res) => {
    ======================= */
 const BROZ_FACTOR = 0.64;
 const KM_WRAP_XRE = 1_000_000;
+// --- unidades km/mi (somente NMAX 2019 usa) ---
+const MI_PER_KM = 0.621371;
+function kmToMi(km) { 
+  return Math.floor(km * MI_PER_KM);   // trunca o decimal ✅
+}
+ // 1 casa decimal
+function miToKm(mi) { return Math.round(mi / MI_PER_KM); }
+function isNmax(model) { return model === 'nmax2019_93c66'; }
+
 
 const DEFAULT_FACTOR = 0.031; // fallback legado
 const MODEL_FACTORS = {
@@ -279,6 +288,7 @@ const MODEL_FACTORS = {
   factor15093c66:    0.03125428035171639,
   biz2018:           0.03125428035171639,
   biz2012_93c66:     0.031,
+  nmax2019_93c66:    0.03125428035171639,
   cb500x2023:        0.03125428035171639,
 };
 function getFactor(model) {
@@ -310,7 +320,7 @@ const mileageLocations = {
   cb300: [0x0080,0x0090,0x00C0,0x00D0],
   cbtwister24c02: [0x0004],
   tornado24c02: [0x0005],
-  xt66024c02: [0x0028,0x0030,0x0040,0x0050,0x0060,0x0070],
+  nmax2019_93c66: [0x0100,0x0104,0x0108,0x010C,0x0110,0x0114,0x0118,0x011C,0x0120,0x0124,0x0128,0x012C,0x0130],  xt66024c02: [0x0028,0x0030,0x0040,0x0050,0x0060,0x0070],
   xre190: [0x0098,0x009C,0x00A0,0x00A4,0x00A8,0x00AC,0x00B0,0x00B4,0x00B8,0x00BC,0x00C0,0x00C4,0x00C8,0x00CC,0x00D0,0x00D4,0x00D8,0x00DA,0x00DE,0x00E0,0x00E2],
   xre300_2014_24c02: [0x0004],
    xre300_2018_93c66: [0x00A0,0x00A4,0x00A8,0x00B0,0x00B4,0x00B8,0x00C0,0x00C4,0x00C8,0x00D0,0x00D4,0x00D8], 
@@ -327,6 +337,7 @@ function getModelConfig(model) {
     crosser150:         { template: 'crosser150_base.bin', offsets: mileageLocations.crosser150 },
     broz24C04:          { template: 'broz24C04.bin',       offsets: mileageLocations.broz24C04 },
     cbtwister24c02:     { template: 'cbtwister24c02.bin',  offsets: mileageLocations.cbtwister24c02 },
+    nmax2019_93c66:    { template: 'nmax2019_93c66.bin',  offsets: mileageLocations.nmax2019_93c66 },
     tornado24c02:       { template: 'tornado24c02.bin',    offsets: mileageLocations.tornado24c02 },
     xt66024c02:         { template: 'xt66024c02.bin',      offsets: mileageLocations.xt66024c02 },
     cb300:              { template: 'cb300_base.bin',      offsets: mileageLocations.cb300 },
@@ -355,6 +366,10 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
     req.session.selectedModel = model;
 
     let km = null;
+    // unidade pedida apenas para NMAX (km por padrão)
+const requestedUnitRaw = (req.body.unit || req.query?.unit || '').toLowerCase();
+const requestedUnit = (isNmax(model) && requestedUnitRaw === 'mi') ? 'mi' : 'km';
+
 
     if (model === 'xre300_2014_24c02') {
       if (buf.length < 0x0062) throw new Error('Arquivo menor que o esperado para 24C02.');
@@ -407,7 +422,7 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
       const B2 = top(freq(valsB2)) & 0xFF;
       km = bcdToDec(B2) * 1000 + bcdToDec(B1) * 10;
 
-   } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','crosser150','factor15093c66'].includes(model)) {
+   } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','nmax2019_93c66','crosser150','factor15093c66'].includes(model)) {
 
   let raw = null;
 
@@ -482,10 +497,21 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
   throw new Error(`Modelo não suportado na leitura: ${model}`);
 }
 
-    if (req.headers['x-fetch-json'] === '1') {
-      return res.json({ modelo: model, km });
-    }
-    res.render('painel', { user, currentKm: km, message: null, session: req.session, selectedModel: req.session.selectedModel });
+   // conversão de saída: apenas NMAX 2019 pode pedir 'mi'
+const displayValue = (isNmax(model) && requestedUnit === 'mi') ? kmToMi(km) : km;
+const displayUnit = isNmax(model) ? requestedUnit : 'km';
+
+if (req.headers['x-fetch-json'] === '1') {
+  return res.json({ modelo: model, value: displayValue, unit: displayUnit });
+}
+res.render('painel', {
+  user,
+  currentKm: displayValue,
+  message: null,
+  session: req.session,
+  selectedModel: req.session.selectedModel
+});
+
 
   } catch (err) {
     if (req.headers['x-fetch-json'] === '1') {
@@ -498,8 +524,23 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
 // GERAR E BAIXAR TEMPLATE/BIN
 app.post('/alterar-e-baixar-template', requireLogin, async (req, res) => {
   try {
-    const kmRaw = parseInt(req.body.new_mileage, 10);
+    let kmRaw = parseInt(req.body.new_mileage, 10);
     const model = req.body.model;
+    // unidade pedida para geração do arquivo (apenas NMAX aceita 'mi')
+const unitInputRaw = String(req.body.unit || '').toLowerCase();
+const unitInput = (isNmax(model) && unitInputRaw === 'mi') ? 'mi' : 'km';
+
+// validação do número informado (na unidade digitada)
+if (isNaN(kmRaw) || kmRaw < 0) throw new Error('KM inválido');
+
+// guarde o que o usuário digitou (para o nome do arquivo depois)
+const originalInput = kmRaw;
+
+// Se o usuário digitou em milhas para NMAX, convertemos para km internamente
+if (isNmax(model) && unitInput === 'mi') {
+  kmRaw = miToKm(kmRaw);
+}
+
     if (isNaN(kmRaw) || kmRaw < 0) throw new Error('KM inválido');
     if (!model) throw new Error('Modelo não informado.');
     req.session.selectedModel = model;
@@ -659,9 +700,20 @@ app.post('/alterar-e-baixar-template', requireLogin, async (req, res) => {
 
 
 
-    res.setHeader('Content-Disposition', `attachment; filename="${model}_${kmRaw}km.bin"`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    return res.send(buffer);
+    // Sufixo da unidade no nome do arquivo:
+// - NMAX usa 'km' ou 'mi' conforme pedido
+// - demais modelos sempre 'km'
+const fileSuffix = isNmax(model) ? unitInput : 'km';
+
+// Número no rótulo:
+// - Para NMAX+mi, mostramos o valor que o usuário digitou (em mi)
+// - Caso contrário, mostramos km (kmRaw)
+const labelNumber = (isNmax(model) && unitInput === 'mi') ? originalInput : kmRaw;
+
+res.setHeader('Content-Disposition', `attachment; filename="${model}_${labelNumber}${fileSuffix}.bin"`);
+res.setHeader('Content-Type', 'application/octet-stream');
+return res.send(buffer);
+
 
   } catch (err) {
     res.status(500).send(`Erro interno: ${err.message}`);
