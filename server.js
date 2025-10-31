@@ -278,6 +278,7 @@ const MODEL_FACTORS = {
   crosser150:        0.03125428035171639,
   factor15093c66:    0.03125428035171639,
   biz2018:           0.03125428035171639,
+  biz2012_93c66:     0.031,
   cb500x2023:        0.03125428035171639,
 };
 function getFactor(model) {
@@ -301,6 +302,7 @@ function convertMileageToEepromBytesFor(model, km) {
 
 const mileageLocations = {
   titan160: [0x0098,0x009C,0x00A0,0x00A4,0x00A8,0x00AC,0x00B0,0x00B4,0x00B8,0x00BC,0x00C0,0x00C4,0x00C8,0x00CC,0x00D0,0x00D4,0x00D8,0x00DA,0x00DE,0x00E0,0x00E2],
+  biz2012_93c66: [0x0080], // vamos tratar especial, mas deixo aqui p/ organização
   biz2018: [0x005C,0x0060,0x0064,0x0068,0x006C,0x0070,0x0074,0x0078,0x007C,0x0080,0x0084,0x0088,0x008C,0x0098],
   cb500x2023: [0x0100,0x0104,0x0108,0x010C,0x0110,0x0114,0x0118,0x011C,0x0120,0x0124,0x0128,0x012C,0x0130,0x0134,0x0138,0x013C],
   crosser150: [0x00A0,0x00A4,0x00A8,0x00B0,0x00B4,0x00B8,0x00C0,0x00C4,0x00C8,0x00D0,0x00D4,0x00D8],
@@ -319,6 +321,7 @@ function getModelConfig(model) {
   const cfg = {
     titan160:           { template: 'titan160.bin',        offsets: mileageLocations.titan160 },
     xre190:             { template: 'xre190.bin',          offsets: mileageLocations.xre190 },
+    biz2012_93c66:      { template: 'biz2012_93c66.bin',   offsets: mileageLocations.biz2012_93c66 },
     biz2018:            { template: 'biz2018.bin',         offsets: mileageLocations.biz2018 },
     cb500x2023:         { template: 'cb500x2023.bin',      offsets: mileageLocations.cb500x2023 },
     crosser150:         { template: 'crosser150_base.bin', offsets: mileageLocations.crosser150 },
@@ -404,21 +407,80 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
       const B2 = top(freq(valsB2)) & 0xFF;
       km = bcdToDec(B2) * 1000 + bcdToDec(B1) * 10;
 
-    } else if (['titan160','xre190','xre300_2018_93c66','biz2018','cb500x2023','cb300','crosser150','factor15093c66'].includes(model)) {
-      const { offsets } = getModelConfig(model);
-      let raw = null;
-      for (const off of offsets) {
-        if (off + 4 > buf.length) continue;
-        const v = buf.readUInt16LE(off);
-        const c = buf.readUInt16LE(off + 2);
-        if ((v + c) === 0xFFFF) { raw = v; break; }
-      }
-      if (raw === null) throw new Error('Nenhum offset válido para este modelo.');
-      km = Math.round(raw / getFactor(model));
+   } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','crosser150','factor15093c66'].includes(model)) {
 
-    } else {
-      throw new Error(`Modelo não suportado na leitura: ${model}`);
+  let raw = null;
+
+  if (model === 'biz2012_93c66') {
+    // --- Leitura especial Biz 2012 (93C66) ---
+
+    const valoresEncontrados = [];
+
+    // Faixa principal 0x0080–0x00BF, blocos de 4 bytes [valorLE, complementoLE]
+    for (let addr = 0x0080; addr <= 0x00BF; addr += 4) {
+      if (addr + 3 >= buf.length) break;
+      const v = buf.readUInt16LE(addr);
+      const c = buf.readUInt16LE(addr + 2);
+      if (((v + c) & 0xFFFF) === 0xFFFF) {
+        valoresEncontrados.push(v);
+      }
     }
+
+    // Espelho (muitos dumps da 93C66 vêm com 512 bytes e repetem +0x100)
+    if (buf.length >= 0x140) {
+      for (let addr = 0x0080 + 0x100; addr <= 0x00BF + 0x100; addr += 4) {
+        if (addr + 3 >= buf.length) break;
+        const v = buf.readUInt16LE(addr);
+        const c = buf.readUInt16LE(addr + 2);
+        if (((v + c) & 0xFFFF) === 0xFFFF) {
+          valoresEncontrados.push(v);
+        }
+      }
+    }
+
+    if (!valoresEncontrados.length) {
+      throw new Error('Nenhum bloco válido de KM encontrado na Biz 2012.');
+    }
+
+    // escolhe o valor mais repetido (mais confiável)
+    const freqMap = valoresEncontrados.reduce((m, v) => {
+      m[v] = (m[v] || 0) + 1;
+      return m;
+    }, {});
+    raw = Number(Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0][0]);
+
+    // converte pra km real
+    km = Math.round((raw / 0.031) * 0.1);
+
+    // esse painel volta a zero depois de 99.999 km
+    if (km > 99999) {
+      km = km % 100000;
+    }
+
+  } else {
+    // --- Leitura normal (modelos já existentes) ---
+
+    const { offsets } = getModelConfig(model);
+    for (const off of offsets) {
+      if (off + 4 > buf.length) continue;
+      const v = buf.readUInt16LE(off);
+      const c = buf.readUInt16LE(off + 2);
+      if ((v + c) === 0xFFFF) {
+        raw = v;
+        break;
+      }
+    }
+
+    if (raw === null) {
+      throw new Error('Nenhum offset válido para este modelo.');
+    }
+
+    km = Math.round(raw / getFactor(model));
+  }
+
+} else {
+  throw new Error(`Modelo não suportado na leitura: ${model}`);
+}
 
     if (req.headers['x-fetch-json'] === '1') {
       return res.json({ modelo: model, km });
@@ -548,11 +610,54 @@ app.post('/alterar-e-baixar-template', requireLogin, async (req, res) => {
         if (i + 3 < buffer.length) kmBytes.copy(buffer, i);
       }
 
+    } else if (model === 'biz2012_93c66') {
+
+      // geração especial Biz 2012 (93C66)
+      if (kmRaw > 99999) {
+        throw new Error('Máximo permitido: 99.999 km para Biz 2012 (93C66)');
+      }
+
+      // cálculo Honda padrão (valor e complemento)
+      const valor = Math.floor((kmRaw * 10) * 0.031);
+
+      const comp  = 0xFFFF - valor;
+
+      const lo     =  valor        & 0xFF;
+      const hi     = (valor >> 8)  & 0xFF;
+      const loComp =  comp         & 0xFF;
+      const hiComp = (comp  >> 8)  & 0xFF;
+
+      // faixa principal 0x0080–0x00BF
+      for (let addr = 0x0080; addr <= 0x00BF; addr += 4) {
+        if (addr + 3 >= buffer.length) break;
+        buffer[addr + 0] = lo;
+        buffer[addr + 1] = hi;
+        buffer[addr + 2] = loComp;
+        buffer[addr + 3] = hiComp;
+      }
+
+      // espelho (caso arquivo tenha 512 bytes, comum em 93C66)
+      if (buffer.length >= 0x140) {
+        for (let addr = 0x0080; addr <= 0x00BF; addr += 4) {
+          const mirror = addr + 0x100;
+          if (mirror + 3 >= buffer.length) break;
+          buffer[mirror + 0] = lo;
+          buffer[mirror + 1] = hi;
+          buffer[mirror + 2] = loComp;
+          buffer[mirror + 3] = hiComp;
+        }
+      }
+
     } else {
+      // modelos genéricos que usam fator e offsets definidos
       const kmBytes = convertMileageToEepromBytesFor(model, kmRaw);
       const { offsets } = getModelConfig(model);
-      for (const off of offsets) if (off + 4 <= buffer.length) kmBytes.copy(buffer, off);
+      for (const off of offsets) {
+        if (off + 4 <= buffer.length) kmBytes.copy(buffer, off);
+      }
     }
+
+
 
     res.setHeader('Content-Disposition', `attachment; filename="${model}_${kmRaw}km.bin"`);
     res.setHeader('Content-Type', 'application/octet-stream');
