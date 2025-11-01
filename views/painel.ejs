@@ -10,17 +10,14 @@
   <style>
     /* reforço do modal para bloquear interação/rolagem */
     .modal-mask {
-    position: fixed;
-    /* substitui inset */
-    top: 0; right: 0; bottom: 0; left: 0;
-    background: rgba(0,0,0,.6);
-    display: none;
-     align-items: center;
-    justify-content: center;
+      position: fixed;
+      top: 0; right: 0; bottom: 0; left: 0;
+      background: rgba(0,0,0,.6);
+      display: none;
+      align-items: center;
+      justify-content: center;
       z-index: 9999;
-}
-
-
+    }
     .modal-card {
       width: min(600px, 92vw);
       background: #fff;
@@ -89,7 +86,7 @@
 
     <!-- Content -->
     <section class="content">
-      <% const modelsList = ['titan160','biz2012_93c66','biz2018','cb500x2023','crosser150','factor15093c66','broz24C04','cb300','xre190','cbtwister24c02','nmax2019_93c66','tornado24c02','xt66024c02','xre300_2014_24c02','xre300_2018_93c66']; %>
+      <% const modelsList = ['titan160','biz2012_93c66','biz2018','cb500x2023','crosser150','factor15093c66','broz24C04','cb300','xre190','cbtwister24c02','nmax2019_93c66','tornado24c02','xt66024c02','xre300_2014_24c02','xre300_2018_93c66','xmax2019_93c66']; %>
 
       <div class="row">
 
@@ -127,9 +124,9 @@
               <input type="number" name="new_mileage" id="new_km" min="0" required />
             </div>
 
-            <!-- Unit picker (mostra só para NMAX via JS) -->
+            <!-- Unit picker (mostra só para NMAX/XMAX via JS) -->
             <div class="form-group" id="unit-gen-wrap" style="display:none;">
-              <label for="unit-gen">Unidade digitada (NMAX)</label>
+              <label for="unit-gen">Unidade digitada (NMAX/XMAX)</label>
               <select id="unit-gen" name="unit">
                 <option value="km" selected>km</option>
                 <option value="mi">mi</option>
@@ -164,9 +161,9 @@
               </div>
             </div>
 
-            <!-- Unit picker (mostra só para NMAX via JS) -->
+            <!-- Unit picker (mostra só para NMAX/XMAX via JS) -->
             <div class="form-row" id="unit-read-wrap" style="display:none;">
-              <label for="unit-read">Unidade do odômetro (NMAX)</label>
+              <label for="unit-read">Unidade do odômetro (NMAX/XMAX)</label>
               <select id="unit-read" name="unit">
                 <option value="km" selected>km</option>
                 <option value="mi">mi</option>
@@ -209,10 +206,22 @@
     const selectGen = document.getElementById('model-select');
     const selectRead= document.getElementById('read-model');
 
+    // imagem por modelo (permite mapear nomes customizados)
+    function getModelImage(model) {
+      // padrão: /static/img/<model>.png
+      // exceções:
+      if (model === 'xmax2019_93c66') return '/static/img/XMAX2021.png';
+      return `/static/img/${model}.png`;
+    }
+
     function showPanel(m) {
       panels.forEach(p => {
         const on = p.dataset.model === m;
         p.hidden = !on;
+        if (on) {
+          const img = p.querySelector(`#panel-img-${m}`);
+          if (img) img.src = getModelImage(m) + '?v=1';
+        }
       });
 
       // limites por modelo
@@ -225,24 +234,24 @@
       }
     }
 
-    // ===== Mostrar/ocultar pickers de unidade apenas para NMAX =====
+    // ===== Mostrar/ocultar pickers de unidade apenas para NMAX/XMAX =====
     function toggleUnitPickers(modelValue) {
-      const isNmax = modelValue === 'nmax2019_93c66';
+      const isSpecial = (modelValue === 'nmax2019_93c66' || modelValue === 'xmax2019_93c66');
 
       // GERAR
       const wrapGen   = document.getElementById('unit-gen-wrap');
       const hiddenGen = document.getElementById('unit-gen-hidden');
       if (wrapGen && hiddenGen) {
-        wrapGen.style.display = isNmax ? '' : 'none';
-        hiddenGen.disabled = isNmax; // quando mostra select, desabilita o hidden
+        wrapGen.style.display = isSpecial ? '' : 'none';
+        hiddenGen.disabled = isSpecial; // quando mostra select, desabilita o hidden
       }
 
       // LER
       const wrapRead   = document.getElementById('unit-read-wrap');
       const hiddenRead = document.getElementById('unit-read-hidden');
       if (wrapRead && hiddenRead) {
-        wrapRead.style.display = isNmax ? '' : 'none';
-        hiddenRead.disabled = isNmax;
+        wrapRead.style.display = isSpecial ? '' : 'none';
+        hiddenRead.disabled = isSpecial;
       }
     }
 
@@ -319,9 +328,9 @@
       form.append('binfile', file); // nome esperado pelo Multer
       form.append('model', model);
 
-      // unidade (NMAX pode ser mi; demais sempre km)
+      // unidade (NMAX/XMAX podem ser mi; demais sempre km)
       let unitToSend = 'km';
-      if (model === 'nmax2019_93c66') {
+      if (model === 'nmax2019_93c66' || model === 'xmax2019_93c66') {
         const sel = document.getElementById('unit-read');
         unitToSend = sel ? sel.value : 'km';
       }
@@ -339,7 +348,7 @@
         try { data = JSON.parse(text); } catch (_) {}
 
         if (!resp.ok) {
-readErr.textContent = 'Erro: ' + (data?.error || text || 'Falha ao ler KM.');
+          readErr.textContent = 'Erro: ' + (data?.error || text || 'Falha ao ler KM.');
           readErr.style.display = 'block';
           return;
         }

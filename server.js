@@ -269,21 +269,57 @@ app.get('/alterar-km', requireLogin, (req, res) => {
    ======================= */
 const BROZ_FACTOR = 0.64;
 const KM_WRAP_XRE = 1_000_000;
-// --- unidades km/mi (somente NMAX 2019 usa) ---
+// --- unidades km/mi (somente NMAX e XMAX usam escolha) ---
 const MI_PER_KM = 0.621371;
-function kmToMi(km) { 
+function kmToMi(km) {
   return Math.floor(km * MI_PER_KM);   // trunca o decimal ✅
 }
- // 1 casa decimal
 function miToKm(mi) { return Math.round(mi / MI_PER_KM); }
 function isNmax(model) { return model === 'nmax2019_93c66'; }
 
+// === XMAX: offsets e helpers ===
+function isXmax(model) {
+  return model === 'xmax2019_93c66';
+}
+const XMAX = {
+  KM_START: 0x0100,     // linha de cima: KM
+  MI_START: 0x0140,     // linha de baixo: MILHAS
+  BLOCK_LEN: 0x20,      // 32 bytes
+  PAIR_LEN: 4,          // [WORD][~WORD]
+  REPEAT: 0x20 / 4      // 8 repetições
+};
+// retorna WORD (16-bit) a partir do valor mostrado no painel
+function xmaxWordFromDisplay(val) {
+  if (val < 0) throw new Error('Valor negativo');
+  return Math.floor(val / 16) & 0xFFFF;
+}
+// monta [WORD][~WORD] em LE
+function xmaxPairBytesFromDisplay(val) {
+  const w = xmaxWordFromDisplay(val);
+  const comp = (0xFFFF - w) & 0xFFFF;
+  const buf = Buffer.alloc(4);
+  buf.writeUInt16LE(w, 0);
+  buf.writeUInt16LE(comp, 2);
+  return buf;
+}
+// preenche um bloco (32 bytes) repetindo o par 8x
+function xmaxFillBlock(displayVal) {
+  const pair = xmaxPairBytesFromDisplay(displayVal);
+  const out = Buffer.alloc(XMAX.BLOCK_LEN);
+  for (let i = 0; i < XMAX.REPEAT; i++) pair.copy(out, i * XMAX.PAIR_LEN);
+  return out;
+}
+// lê o primeiro WORD do bloco e retorna o valor aproximado exibido (WORD * 16)
+function xmaxDecodeBlock(buf, start) {
+  const w = buf.readUInt16LE(start);
+  return w * 16;
+}
 
 const DEFAULT_FACTOR = 0.031; // fallback legado
 const MODEL_FACTORS = {
   titan160:          0.03125428035171639,
   xre190:            0.03125428035171639,
-  xre300_2018_93c66: 0.03125428035171639, 
+  xre300_2018_93c66: 0.03125428035171639,
   crosser150:        0.03125428035171639,
   factor15093c66:    0.03125428035171639,
   biz2018:           0.03125428035171639,
@@ -323,8 +359,17 @@ const mileageLocations = {
   nmax2019_93c66: [0x0100,0x0104,0x0108,0x010C,0x0110,0x0114,0x0118,0x011C,0x0120,0x0124,0x0128,0x012C,0x0130],  xt66024c02: [0x0028,0x0030,0x0040,0x0050,0x0060,0x0070],
   xre190: [0x0098,0x009C,0x00A0,0x00A4,0x00A8,0x00AC,0x00B0,0x00B4,0x00B8,0x00BC,0x00C0,0x00C4,0x00C8,0x00CC,0x00D0,0x00D4,0x00D8,0x00DA,0x00DE,0x00E0,0x00E2],
   xre300_2014_24c02: [0x0004],
-   xre300_2018_93c66: [0x00A0,0x00A4,0x00A8,0x00B0,0x00B4,0x00B8,0x00C0,0x00C4,0x00C8,0x00D0,0x00D4,0x00D8], 
+  xre300_2018_93c66: [0x00A0,0x00A4,0x00A8,0x00B0,0x00B4,0x00B8,0x00C0,0x00C4,0x00C8,0x00D0,0x00D4,0x00D8],
   factor15093c66: [0x00A0,0x00A4,0x00A8,0x00B0,0x00B4,0x00B8,0x00C0,0x00C4,0x00C8,0x00D0,0x00D4,0x00D8],
+};
+
+// Para XMAX usamos um objeto específico (dois blocos fixos)
+const mileageLocationsXmax = {
+  xmax2019_93c66: {
+    km: [0x0100],
+    mi: [0x0140],
+    length: 0x20
+  }
 };
 
 function getModelConfig(model) {
@@ -337,13 +382,16 @@ function getModelConfig(model) {
     crosser150:         { template: 'crosser150_base.bin', offsets: mileageLocations.crosser150 },
     broz24C04:          { template: 'broz24C04.bin',       offsets: mileageLocations.broz24C04 },
     cbtwister24c02:     { template: 'cbtwister24c02.bin',  offsets: mileageLocations.cbtwister24c02 },
-    nmax2019_93c66:    { template: 'nmax2019_93c66.bin',  offsets: mileageLocations.nmax2019_93c66 },
+    nmax2019_93c66:     { template: 'nmax2019_93c66.bin',  offsets: mileageLocations.nmax2019_93c66 },
     tornado24c02:       { template: 'tornado24c02.bin',    offsets: mileageLocations.tornado24c02 },
     xt66024c02:         { template: 'xt66024c02.bin',      offsets: mileageLocations.xt66024c02 },
     cb300:              { template: 'cb300_base.bin',      offsets: mileageLocations.cb300 },
     xre300_2014_24c02:  { template: 'xre300_2014_24c02.bin', offsets: mileageLocations.xre300_2014_24c02 },
     xre300_2018_93c66:  { template: 'xre300_2018_93c66.bin', offsets: mileageLocations.xre300_2018_93c66 },
     factor15093c66:     { template: 'factor15093c66.bin',  offsets: mileageLocations.factor15093c66 },
+
+    // XMAX: devolvemos apenas template aqui; offsets especiais tratados nas rotas
+    xmax2019_93c66:     { template: 'xmax2019_93c66.bin',  offsets: [] },
   }[model];
   if (!cfg) throw new Error(`Modelo inválido: ${model}`);
   return cfg;
@@ -366,10 +414,10 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
     req.session.selectedModel = model;
 
     let km = null;
-    // unidade pedida apenas para NMAX (km por padrão)
-const requestedUnitRaw = (req.body.unit || req.query?.unit || '').toLowerCase();
-const requestedUnit = (isNmax(model) && requestedUnitRaw === 'mi') ? 'mi' : 'km';
 
+    // unidade pedida: NMAX e XMAX aceitam 'mi'; demais em 'km'
+    const requestedUnitRaw = (req.body.unit || req.query?.unit || '').toLowerCase();
+    const requestedUnit = (isNmax(model) || isXmax(model)) && requestedUnitRaw === 'mi' ? 'mi' : 'km';
 
     if (model === 'xre300_2014_24c02') {
       if (buf.length < 0x0062) throw new Error('Arquivo menor que o esperado para 24C02.');
@@ -422,101 +470,121 @@ const requestedUnit = (isNmax(model) && requestedUnitRaw === 'mi') ? 'mi' : 'km'
       const B2 = top(freq(valsB2)) & 0xFF;
       km = bcdToDec(B2) * 1000 + bcdToDec(B1) * 10;
 
-   } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','nmax2019_93c66','crosser150','factor15093c66'].includes(model)) {
-
-  let raw = null;
-
-  if (model === 'biz2012_93c66') {
-    // --- Leitura especial Biz 2012 (93C66) ---
-
-    const valoresEncontrados = [];
-
-    // Faixa principal 0x0080–0x00BF, blocos de 4 bytes [valorLE, complementoLE]
-    for (let addr = 0x0080; addr <= 0x00BF; addr += 4) {
-      if (addr + 3 >= buf.length) break;
-      const v = buf.readUInt16LE(addr);
-      const c = buf.readUInt16LE(addr + 2);
-      if (((v + c) & 0xFFFF) === 0xFFFF) {
-        valoresEncontrados.push(v);
+    } else if (model === 'xmax2019_93c66') {
+      // --- Leitura XMAX: dois blocos fixos
+      if (buf.length < (XMAX.MI_START + XMAX.BLOCK_LEN)) {
+        throw new Error('Arquivo XMAX muito pequeno (>= 0x160 bytes).');
       }
-    }
+      const kmBlockVal = xmaxDecodeBlock(buf, XMAX.KM_START); // KM (linha de cima)
+      const miBlockVal = xmaxDecodeBlock(buf, XMAX.MI_START); // MI (linha de baixo)
 
-    // Espelho (muitos dumps da 93C66 vêm com 512 bytes e repetem +0x100)
-    if (buf.length >= 0x140) {
-      for (let addr = 0x0080 + 0x100; addr <= 0x00BF + 0x100; addr += 4) {
-        if (addr + 3 >= buf.length) break;
-        const v = buf.readUInt16LE(addr);
-        const c = buf.readUInt16LE(addr + 2);
-        if (((v + c) & 0xFFFF) === 0xFFFF) {
-          valoresEncontrados.push(v);
+      const displayValue = (requestedUnit === 'mi') ? miBlockVal : kmBlockVal;
+      const displayUnit = requestedUnit;
+
+      if (req.headers['x-fetch-json'] === '1') {
+        return res.json({ modelo: model, value: displayValue, unit: displayUnit });
+      }
+      return res.render('painel', {
+        user,
+        currentKm: displayValue,
+        message: null,
+        session: req.session,
+        selectedModel: req.session.selectedModel
+      });
+
+    } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','nmax2019_93c66','crosser150','factor15093c66'].includes(model)) {
+
+      let raw = null;
+
+      if (model === 'biz2012_93c66') {
+        // --- Leitura especial Biz 2012 (93C66) ---
+        const valoresEncontrados = [];
+
+        // Faixa principal 0x0080–0x00BF, blocos de 4 bytes [valorLE, complementoLE]
+        for (let addr = 0x0080; addr <= 0x00BF; addr += 4) {
+          if (addr + 3 >= buf.length) break;
+          const v = buf.readUInt16LE(addr);
+          const c = buf.readUInt16LE(addr + 2);
+          if (((v + c) & 0xFFFF) === 0xFFFF) {
+            valoresEncontrados.push(v);
+          }
         }
+
+        // Espelho (muitos dumps da 93C66 vêm com 512 bytes e repetem +0x100)
+        if (buf.length >= 0x140) {
+          for (let addr = 0x0080 + 0x100; addr <= 0x00BF + 0x100; addr += 4) {
+            if (addr + 3 >= buf.length) break;
+            const v = buf.readUInt16LE(addr);
+            const c = buf.readUInt16LE(addr + 2);
+            if (((v + c) & 0xFFFF) === 0xFFFF) {
+              valoresEncontrados.push(v);
+            }
+          }
+        }
+
+        if (!valoresEncontrados.length) {
+          throw new Error('Nenhum bloco válido de KM encontrado na Biz 2012.');
+        }
+
+        // escolhe o valor mais repetido (mais confiável)
+        const freqMap = valoresEncontrados.reduce((m, v) => {
+          m[v] = (m[v] || 0) + 1;
+          return m;
+        }, {});
+        raw = Number(Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0][0]);
+
+        // converte pra km real
+        km = Math.round((raw / 0.031) * 0.1);
+
+        // esse painel volta a zero depois de 99.999 km
+        if (km > 99999) {
+          km = km % 100000;
+        }
+
+      } else {
+        // --- Leitura normal (modelos já existentes) ---
+        const { offsets } = getModelConfig(model);
+        for (const off of offsets) {
+          if (off + 4 > buf.length) continue;
+          const v = buf.readUInt16LE(off);
+          const c = buf.readUInt16LE(off + 2);
+          if ((v + c) === 0xFFFF) {
+            raw = v;
+            break;
+          }
+        }
+
+        if (raw === null) {
+          throw new Error('Nenhum offset válido para este modelo.');
+        }
+
+        km = Math.round(raw / getFactor(model));
       }
-    }
 
-    if (!valoresEncontrados.length) {
-      throw new Error('Nenhum bloco válido de KM encontrado na Biz 2012.');
-    }
+      // conversão de saída: apenas NMAX pode pedir 'mi' (para exibir)
+      const displayValue = (isNmax(model) && requestedUnit === 'mi') ? kmToMi(km) : km;
+      const displayUnit = isNmax(model) ? requestedUnit : 'km';
 
-    // escolhe o valor mais repetido (mais confiável)
-    const freqMap = valoresEncontrados.reduce((m, v) => {
-      m[v] = (m[v] || 0) + 1;
-      return m;
-    }, {});
-    raw = Number(Object.entries(freqMap).sort((a,b)=>b[1]-a[1])[0][0]);
-
-    // converte pra km real
-    km = Math.round((raw / 0.031) * 0.1);
-
-    // esse painel volta a zero depois de 99.999 km
-    if (km > 99999) {
-      km = km % 100000;
-    }
-
-  } else {
-    // --- Leitura normal (modelos já existentes) ---
-
-    const { offsets } = getModelConfig(model);
-    for (const off of offsets) {
-      if (off + 4 > buf.length) continue;
-      const v = buf.readUInt16LE(off);
-      const c = buf.readUInt16LE(off + 2);
-      if ((v + c) === 0xFFFF) {
-        raw = v;
-        break;
+      if (req.headers['x-fetch-json'] === '1') {
+        return res.json({ modelo: model, value: displayValue, unit: displayUnit });
       }
+      return res.render('painel', {
+        user,
+        currentKm: displayValue,
+        message: null,
+        session: req.session,
+        selectedModel: req.session.selectedModel
+      });
+
+    } else {
+      throw new Error(`Modelo não suportado na leitura: ${model}`);
     }
-
-    if (raw === null) {
-      throw new Error('Nenhum offset válido para este modelo.');
-    }
-
-    km = Math.round(raw / getFactor(model));
-  }
-
-} else {
-  throw new Error(`Modelo não suportado na leitura: ${model}`);
-}
-
-   // conversão de saída: apenas NMAX 2019 pode pedir 'mi'
-const displayValue = (isNmax(model) && requestedUnit === 'mi') ? kmToMi(km) : km;
-const displayUnit = isNmax(model) ? requestedUnit : 'km';
-
-if (req.headers['x-fetch-json'] === '1') {
-  return res.json({ modelo: model, value: displayValue, unit: displayUnit });
-}
-res.render('painel', {
-  user,
-  currentKm: displayValue,
-  message: null,
-  session: req.session,
-  selectedModel: req.session.selectedModel
-});
-
 
   } catch (err) {
     if (req.headers['x-fetch-json'] === '1') {
       return res.status(400).json({ error: err.message });
     }
+    const user = getUser(req.session.user.username);
     res.render('painel', { user, session: req.session, currentKm: null, message: `Erro: ${err.message}`, selectedModel: req.session.selectedModel });
   }
 });
@@ -526,20 +594,20 @@ app.post('/alterar-e-baixar-template', requireLogin, async (req, res) => {
   try {
     let kmRaw = parseInt(req.body.new_mileage, 10);
     const model = req.body.model;
-    // unidade pedida para geração do arquivo (apenas NMAX aceita 'mi')
-const unitInputRaw = String(req.body.unit || '').toLowerCase();
-const unitInput = (isNmax(model) && unitInputRaw === 'mi') ? 'mi' : 'km';
+    // unidade pedida para geração do arquivo (NMAX e XMAX aceitam 'mi')
+    const unitInputRaw = String(req.body.unit || '').toLowerCase();
+    const unitInput = ((isNmax(model) || isXmax(model)) && unitInputRaw === 'mi') ? 'mi' : 'km';
 
-// validação do número informado (na unidade digitada)
-if (isNaN(kmRaw) || kmRaw < 0) throw new Error('KM inválido');
+    // validação do número informado (na unidade digitada)
+    if (isNaN(kmRaw) || kmRaw < 0) throw new Error('KM inválido');
 
-// guarde o que o usuário digitou (para o nome do arquivo depois)
-const originalInput = kmRaw;
+    // guarde o que o usuário digitou (para o nome do arquivo depois)
+    const originalInput = kmRaw;
 
-// Se o usuário digitou em milhas para NMAX, convertemos para km internamente
-if (isNmax(model) && unitInput === 'mi') {
-  kmRaw = miToKm(kmRaw);
-}
+    // Se o usuário digitou em milhas para NMAX, convertemos para km internamente (XMAX: NÃO CONVERTEMOS)
+    if (isNmax(model) && unitInput === 'mi') {
+      kmRaw = miToKm(kmRaw);
+    }
 
     if (isNaN(kmRaw) || kmRaw < 0) throw new Error('KM inválido');
     if (!model) throw new Error('Modelo não informado.');
@@ -689,6 +757,26 @@ if (isNmax(model) && unitInput === 'mi') {
         }
       }
 
+    } else if (model === 'xmax2019_93c66') {
+      // --- Geração XMAX: grava SOMENTE o bloco solicitado (km OU mi)
+      if (buffer.length < (XMAX.MI_START + XMAX.BLOCK_LEN)) {
+        throw new Error('Template XMAX muito pequeno (>= 0x160 bytes).');
+      }
+
+      const block = xmaxFillBlock(originalInput); // valor do usuário na unidade escolhida
+      if (unitInput === 'mi') {
+        block.copy(buffer, XMAX.MI_START); // apenas milhas
+      } else {
+        block.copy(buffer, XMAX.KM_START); // apenas km
+      }
+
+      // Nome do arquivo: usa a unidade que o usuário escolheu
+      const fileSuffix = unitInput; // 'km' | 'mi'
+      const labelNumber = originalInput;
+      res.setHeader('Content-Disposition', `attachment; filename="${model}_${labelNumber}${fileSuffix}.bin"`);
+      res.setHeader('Content-Type', 'application/octet-stream');
+      return res.send(buffer);
+
     } else {
       // modelos genéricos que usam fator e offsets definidos
       const kmBytes = convertMileageToEepromBytesFor(model, kmRaw);
@@ -698,22 +786,19 @@ if (isNmax(model) && unitInput === 'mi') {
       }
     }
 
-
-
     // Sufixo da unidade no nome do arquivo:
-// - NMAX usa 'km' ou 'mi' conforme pedido
-// - demais modelos sempre 'km'
-const fileSuffix = isNmax(model) ? unitInput : 'km';
+    // - NMAX usa 'km' ou 'mi' conforme pedido (XMAX já foi atendido e dado return acima)
+    // - demais modelos sempre 'km'
+    const fileSuffix = isNmax(model) ? unitInput : 'km';
 
-// Número no rótulo:
-// - Para NMAX+mi, mostramos o valor que o usuário digitou (em mi)
-// - Caso contrário, mostramos km (kmRaw)
-const labelNumber = (isNmax(model) && unitInput === 'mi') ? originalInput : kmRaw;
+    // Número no rótulo:
+    // - Para NMAX+mi, mostramos o valor que o usuário digitou (em mi)
+    // - Caso contrário, mostramos km (kmRaw)
+    const labelNumber = (isNmax(model) && unitInput === 'mi') ? originalInput : kmRaw;
 
-res.setHeader('Content-Disposition', `attachment; filename="${model}_${labelNumber}${fileSuffix}.bin"`);
-res.setHeader('Content-Type', 'application/octet-stream');
-return res.send(buffer);
-
+    res.setHeader('Content-Disposition', `attachment; filename="${model}_${labelNumber}${fileSuffix}.bin"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    return res.send(buffer);
 
   } catch (err) {
     res.status(500).send(`Erro interno: ${err.message}`);
@@ -755,10 +840,10 @@ app.post('/confirmar-pix', requireLogin, async (req, res) => {
   savePendentes(pend);
 
   if (bot) {
-    const text = `*Novo PIX aguardando comprovante*\n` +
-      `• Usuário: _${user.username}_\n` +
-      `• Tokens: *+${valor}*\n` +
-      `• TXID: \`${txid}\``;
+    const text = `*Novo PIX aguardando comprovante*
+• Usuário: _${user.username}_
+• Tokens: *+${valor}*
+• TXID: \`${txid}\``;
     const opts = {
       parse_mode: 'Markdown',
       reply_markup: {
