@@ -326,6 +326,7 @@ const MODEL_FACTORS = {
   biz2012_93c66:     0.031,
   nmax2019_93c66:    0.03125428035171639,
   cb500x2023:        0.03125428035171639,
+  start93c66:        0.03125428035171639,
 };
 function getFactor(model) {
   return MODEL_FACTORS[model] ?? DEFAULT_FACTOR;
@@ -356,6 +357,7 @@ const mileageLocations = {
   cb300: [0x0080,0x0090,0x00C0,0x00D0],
   cbtwister24c02: [0x0004],
   tornado24c02: [0x0005],
+  start93c66: [0x0098,0x009C,0x00A0,0x00A4,0x00A8,0x00AC,0x00B0,0x00B4,0x00B8,0x00BC,0x00C0,0x00C4,0x00C8,0x00CC,0x00D0,0x00D4,0x00D8,0x00DA,0x00DE,0x00E0,0x00E2],
   nmax2019_93c66: [0x0100,0x0104,0x0108,0x010C,0x0110,0x0114,0x0118,0x011C,0x0120,0x0124,0x0128,0x012C,0x0130],  xt66024c02: [0x0028,0x0030,0x0040,0x0050,0x0060,0x0070],
   xre190: [0x0098,0x009C,0x00A0,0x00A4,0x00A8,0x00AC,0x00B0,0x00B4,0x00B8,0x00BC,0x00C0,0x00C4,0x00C8,0x00CC,0x00D0,0x00D4,0x00D8,0x00DA,0x00DE,0x00E0,0x00E2],
   xre300_2014_24c02: [0x0004],
@@ -388,6 +390,7 @@ function getModelConfig(model) {
     cb300:              { template: 'cb300_base.bin',      offsets: mileageLocations.cb300 },
     xre300_2014_24c02:  { template: 'xre300_2014_24c02.bin', offsets: mileageLocations.xre300_2014_24c02 },
     xre300_2018_93c66:  { template: 'xre300_2018_93c66.bin', offsets: mileageLocations.xre300_2018_93c66 },
+    start93c66:         { template: 'start93c66.bin',      offsets: mileageLocations.start93c66 },
     factor15093c66:     { template: 'factor15093c66.bin',  offsets: mileageLocations.factor15093c66 },
 
     // XMAX: devolvemos apenas template aqui; offsets especiais tratados nas rotas
@@ -492,7 +495,7 @@ app.post('/ler-km', requireLogin, upload.single('binfile'), async (req, res) => 
         selectedModel: req.session.selectedModel
       });
 
-    } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','nmax2019_93c66','crosser150','factor15093c66'].includes(model)) {
+    } else if (['titan160','xre190','xre300_2018_93c66','biz2018','biz2012_93c66','cb500x2023','cb300','nmax2019_93c66','crosser150','start93c66','factor15093c66'].includes(model)) {
 
       let raw = null;
 
