@@ -142,7 +142,11 @@
         <!-- Card: Ler KM -->
         <div class="card card-gradient">
           <h2><i data-feather="eye" aria-hidden="true"></i> Ler KM Atual</h2>
-          <form id="read-form" class="form-modern" enctype="multipart/form-data">
+         <form id="read-form"
+      class="form-modern"
+      method="post"
+      action="/ler-km"
+      enctype="multipart/form-data">
             <div class="form-row">
               <label for="read-model">Modelo</label>
               <select id="read-model" name="model" required>
